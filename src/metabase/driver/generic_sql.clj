@@ -84,6 +84,7 @@
      dataset name as well. (At the time of this writing, this is only used by the SQL parameters implementation; in
      the future it will probably be used in more places as well.)")
 
+  ;; TODO - consider removing this because only Crate implements it, and Crate it unsupported
   (field->alias ^String [this, ^FieldInstance field]
     "*OPTIONAL*. Return the alias that should be used to for FIELD, i.e. in an `AS` clause. The default implementation
      calls `:name`, which returns the *unqualified* name of `Field`.
