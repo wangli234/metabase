@@ -1,10 +1,10 @@
 (ns metabase.test.data.postgres
   "Code for creating / destroying a Postgres database from a `DatabaseDefinition`."
-  (:require [metabase.test.data
+  (:require [metabase.driver.postgres :as postgres]
+            [metabase.test.data
              [generic-sql :as generic]
              [interface :as i]]
-            [metabase.util :as u])
-  (:import metabase.driver.postgres.PostgresDriver))
+            [metabase.util :as u]))
 
 (def ^:private ^:const field-base-type->sql-type
   {:type/BigInteger     "BIGINT"
@@ -47,7 +47,7 @@
        (generic/default-drop-db-if-exists-sql driver dbdef)))
 
 
-(u/strict-extend PostgresDriver
+(u/strict-extend (class (postgres/->PostgresDriver))
   generic/IGenericSQLTestExtensions
   (merge generic/DefaultsMixin
          {:drop-db-if-exists-sql         drop-db-if-exists-sql

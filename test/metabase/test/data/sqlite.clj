@@ -1,13 +1,13 @@
 (ns metabase.test.data.sqlite
   (:require [honeysql.core :as hsql]
+            [metabase.driver.sqlite :as sqlite]
             [metabase.test.data
              [generic-sql :as generic]
              [interface :as i]]
             [metabase.util :as u]
             [metabase.util
              [date :as du]
-             [honeysql-extensions :as hx]])
-  (:import metabase.driver.sqlite.SQLiteDriver))
+             [honeysql-extensions :as hx]]))
 
 (defn- database->connection-details [context dbdef]
   {:db (str (i/escaped-name dbdef) ".sqlite")})
@@ -24,7 +24,8 @@
    :type/Time       "TIME"})
 
 (defn- load-data-stringify-dates
-  "Our SQLite JDBC driver doesn't seem to like Dates/Timestamps so just convert them to strings before INSERTing them into the Database."
+  "Our SQLite JDBC driver doesn't seem to like Dates/Timestamps so just convert them to strings before INSERTing them
+  into the Database."
   [insert!]
   (fn [rows]
     (insert! (for [row rows]
@@ -38,7 +39,7 @@
 
                                :else v)]))))))
 
-(u/strict-extend SQLiteDriver
+(u/strict-extend (class (sqlite/->SQLiteDriver))
   generic/IGenericSQLTestExtensions
   (merge generic/DefaultsMixin
          {:add-fk-sql                (constantly nil) ; TODO - fix me

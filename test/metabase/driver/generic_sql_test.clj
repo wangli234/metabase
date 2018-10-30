@@ -8,15 +8,14 @@
             [metabase.test.data :as data :refer :all]
             [metabase.test.data.datasets :as datasets]
             [metabase.test.util.log :as tu.log]
-            [toucan.db :as db])
-  (:import metabase.driver.h2.H2Driver))
+            [toucan.db :as db]))
 
 (def ^:private users-table      (delay (Table :name "USERS")))
 (def ^:private venues-table     (delay (Table (id :venues))))
 (def ^:private users-name-field (delay (Field (id :users :name))))
 
 (def ^:private generic-sql-engines
-  (delay (set (for [engine datasets/all-valid-engines
+  (delay (set (for [engine @driver/possible-driver-names
                     :let   [driver (driver/engine->driver engine)]
                     :when  (not (contains? #{:bigquery :presto :sparksql} engine))       ; bigquery, presto and sparksql don't use the generic sql implementations of things like `field-avg-length`
                     :when  (extends? ISQLDriver (class driver))]
@@ -28,7 +27,7 @@
 (expect
   {:tables (set (map #(hash-map :name % :schema "PUBLIC" :description nil)
                      ["CATEGORIES" "VENUES" "CHECKINS" "USERS"]))}
-  (driver/describe-database (H2Driver.) (db)))
+  (driver/describe-database (driver/engine->driver :h2) (db)))
 
 ;; DESCRIBE-TABLE
 (expect
@@ -53,7 +52,7 @@
               :database-type "BIGINT"
               :base-type     :type/BigInteger
               :pk?           true}}}
-  (driver/describe-table (H2Driver.) (db) @venues-table))
+  (driver/describe-table (driver/engine->driver :h2) (db) @venues-table))
 
 ;; DESCRIBE-TABLE-FKS
 (expect
@@ -61,7 +60,7 @@
      :dest-table       {:name   "CATEGORIES"
                         :schema "PUBLIC"}
      :dest-column-name "ID"}}
-  (driver/describe-table-fks (H2Driver.) (db) @venues-table))
+  (driver/describe-table-fks (driver/engine->driver :h2) (db) @venues-table))
 
 ;;; TABLE-ROWS-SAMPLE
 (datasets/expect-with-engines @generic-sql-engines

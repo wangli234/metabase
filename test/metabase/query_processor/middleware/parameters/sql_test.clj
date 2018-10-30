@@ -562,15 +562,15 @@
     (second (re-find #"FROM\s([^\s()]+)" sql))))
 
 ;; as with the MBQL parameters tests Redshift and Crate fail for unknown reasons; disable their tests for now
-(def ^:private ^:const sql-parameters-engines
-  (disj (qpt/non-timeseries-engines-with-feature :native-parameters) :redshift :crate))
+(def ^:private sql-parameters-engines
+  (delay (disj (qpt/non-timeseries-engines-with-feature :native-parameters) :redshift :crate)))
 
 (defn- process-native {:style/indent 0} [& kvs]
   (du/with-effective-timezone (Database (data/id))
     (qp/process-query
       (apply assoc {:database (data/id), :type :native, :settings {:report-timezone "UTC"}} kvs))))
 
-(datasets/expect-with-engines sql-parameters-engines
+(datasets/expect-with-engines @sql-parameters-engines
   [29]
   (first-row
     (format-rows-by [int]
@@ -585,7 +585,7 @@
                       :value  "2015-04-01~2015-05-01"}]))))
 
 ;; no parameter -- should give us a query with "WHERE 1 = 1"
-(datasets/expect-with-engines sql-parameters-engines
+(datasets/expect-with-engines @sql-parameters-engines
   [1000]
   (first-row
     (format-rows-by [int]
@@ -599,7 +599,7 @@
 
 ;; test that relative dates work correctly. It should be enough to try just one type of relative date here, since
 ;; handling them gets delegated to the functions in `metabase.query-processor.parameters`, which is fully-tested :D
-(datasets/expect-with-engines sql-parameters-engines
+(datasets/expect-with-engines @sql-parameters-engines
   [0]
   (first-row
     (format-rows-by [int]
@@ -613,7 +613,7 @@
 
 
 ;; test that multiple filters applied to the same variable combine into `AND` clauses (#3539)
-(datasets/expect-with-engines sql-parameters-engines
+(datasets/expect-with-engines @sql-parameters-engines
   [4]
   (first-row
     (format-rows-by [int]
@@ -627,7 +627,7 @@
                      {:type :date/single, :target [:dimension [:template-tag "checkin_date"]], :value "2015-07-01"}]))))
 
 ;; Test that native dates are parsed with the report timezone (when supported)
-(datasets/expect-with-engines (disj sql-parameters-engines :sqlite)
+(datasets/expect-with-engines (disj @sql-parameters-engines :sqlite)
   [(cond
      (= :presto datasets/*engine*)
      "2018-04-18"

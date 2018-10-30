@@ -1,11 +1,11 @@
 (ns metabase.test.data.redshift
-  (:require [clojure.string :as s]
-            [metabase.driver.generic-sql :as sql]
+  (:require [metabase.driver
+             [generic-sql :as sql]
+             [redshift :as redshift]]
             [metabase.test.data
              [generic-sql :as generic]
              [interface :as i]]
-            [metabase.util :as u])
-  (:import metabase.driver.redshift.RedshiftDriver))
+            [metabase.util :as u]))
 
 ;; Time, UUID types aren't supported by redshift
 (def ^:private ^:const field-base-type->sql-type
@@ -36,7 +36,7 @@
   (str "schema_" session-schema-number))
 
 
-(u/strict-extend RedshiftDriver
+(u/strict-extend (class (redshift/->RedshiftDriver))
   generic/IGenericSQLTestExtensions
   (merge generic/DefaultsMixin
          {:create-db-sql             (constantly nil)
@@ -58,7 +58,7 @@
 
 (defn- execute-when-testing-redshift! [format-str & args]
   (generic/execute-when-testing! :redshift
-    (fn [] (sql/connection-details->spec (RedshiftDriver.) @db-connection-details))
+    (fn [] (sql/connection-details->spec (redshift/->RedshiftDriver) @db-connection-details))
     (apply format format-str args)))
 
 (defn- create-session-schema!

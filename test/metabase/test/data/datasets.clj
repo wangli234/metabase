@@ -1,24 +1,15 @@
 (ns metabase.test.data.datasets
   "Interface + implementations for loading test datasets for different drivers, and getting information about the
   dataset's tables, fields, etc."
-  (:require [clojure.string :as s]
+  (:require [clojure.string :as str]
             [clojure.tools.logging :as log]
             [colorize.core :as color]
             [environ.core :refer [env]]
-            [expectations :refer [expect]]
+            [expectations :as expectations]
             [metabase
              [config :as config]
-             [driver :as driver]
-             [plugins :as plugins]]
+             [driver :as driver]]
             [metabase.test.data.interface :as i]))
-
-;; When running tests, we need to make sure plugins (i.e., the Oracle JDBC driver) are loaded because otherwise the
-;; Oracle driver won't show up in the list of valid drivers below
-(plugins/load-plugins!)
-
-(driver/find-and-load-drivers!)
-
-(def ^:const all-valid-engines (set (keys (driver/available-drivers))))
 
 ;; # Logic for determining which datasets to test against
 
@@ -34,35 +25,32 @@
 (defn- get-engines-from-env
   "Return a set of dataset names to test against from the env var `ENGINES`."
   []
-  (when-let [env-engines (some-> (env :engines) s/lower-case)]
-    (set (for [engine (s/split env-engines #",")
+  (when-let [env-engines (some-> (env :engines) str/lower-case)]
+    (set (for [engine (str/split env-engines #",")
                :when engine]
            (keyword engine)))))
 
-(def ^:const test-engines
+(def ^:private test-engines
   "Set of names of drivers we should run tests against.
    By default, this only contains `:h2` but can be overriden by setting env var `ENGINES`."
-  (let [engines (or (get-engines-from-env)
-                    #{:h2})]
-    (when config/is-test?
-      (log/info (color/cyan "Running QP tests against these engines: " engines)))
+  (delay
+   (let [engines (or (get-engines-from-env)
+                     #{:h2})]
+     (when config/is-test?
+       (log/info (color/cyan "Running QP tests against these engines: " engines)))
 
-    (when-not (every? all-valid-engines engines)
-      (throw (Exception.
-              (format "Testing on '%s', but the following drivers are not available '%s'"
-                      engines (set (remove all-valid-engines engines))))))
-    engines))
+     (when-not (every? @driver/possible-driver-names engines)
+       (throw (Exception.
+               (format "Testing on '%s', but the following drivers are not available '%s'"
+                       engines (set (remove @driver/possible-driver-names engines))))))
+     engines)))
 
 
 ;; # Helper Macros
 
-(def ^:private ^:const default-engine
-  (if (contains? test-engines :h2) :h2
-      (first test-engines)))
-
 (def ^:dynamic *engine*
-  "Keyword name of the engine that we're currently testing against. Defaults to `:h2`."
-  default-engine)
+  "Keyword name of the driver that we're currently testing against. Defaults to `:h2`."
+  :h2)
 
 (defn- engine->test-extensions-ns-symbol
   "Return the namespace where we'd expect to find test extensions for the driver with ENGINE keyword.
@@ -81,10 +69,9 @@
   (driver/engine->driver engine))
 
 (def ^:dynamic *driver*
-  "The driver we're currently testing against, bound by `with-engine`.
-   This is just a regular driver, e.g. `MySQLDriver`, with an extra promise keyed by `:dbpromise`
-   that is used to store the `test-data` dataset when you call `load-data!`."
-  (engine->driver default-engine))
+  "The driver we're currently testing against, bound by `with-engine`. This is just a regular driver, e.g. an instance
+  of `MySQLDriver`."
+  (engine->driver :h2))
 
 (defn do-with-engine
   "Bind `*engine*` and `*driver*` as appropriate for ENGINE and execute F, a function that takes no args."
@@ -106,7 +93,7 @@
    (This does NOT bind `*driver*`; use `do-with-engine` if you want to do that.)"
   {:style/indent 1}
   [engine f]
-  (when (contains? test-engines engine)
+  (when (contains? @test-engines engine)
     (f)))
 
 (defmacro when-testing-engine
@@ -129,38 +116,33 @@
   driver for ENGINE."
   {:style/indent 1}
   [engine expected actual]
-  `(when-testing-engine ~engine
-     (expect
-       (with-engine ~engine ~expected)
-       (with-engine ~engine ~actual))))
+  `(def ~(vary-meta (#'expectations/hashname &form) assoc :expectation true)
+     (fn []
+       (let [engine# ~engine]
+         (when-testing-engine engine#
+           (expectations/doexpect
+            (with-engine engine# ~expected)
+            (with-engine engine# ~actual)))))))
 
 (defmacro expect-with-engines
-  "Generate unit tests for all datasets in ENGINES; each test will only run if we're currently testing the
-  corresponding dataset. `*driver*` is bound to the current dataset inside each test."
+  "Generate unit tests for all datasets in `engines`; each test will only run if we're currently testing the
+  corresponding dataset. `*driver*` is bound to the current dataset inside each test. `engines` is not evaluated until
+  the tests themselves are ran, meaning it can be things like a delay."
   {:style/indent 1}
   [engines expected actual]
   ;; Make functions to get expected/actual so the code is only compiled one time instead of for every single driver
   ;; speeds up loading of metabase.driver.query-processor-test significantly
-  (let [e (symbol (str "expected-" (hash expected)))
-        a (symbol (str "actual-"   (hash actual)))]
-    `(let [~e (fn [] ~expected)
-           ~a (fn [] ~actual)]
-       ~@(for [engine (eval engines)]
-           `(when-testing-engine ~engine
-              (expect
-                (do-with-engine ~engine ~e)
-                (do-with-engine ~engine ~a)))))))
-
-(defmacro expect-with-all-engines
-  "Generate unit tests for all valid datasets; each test will only run if we're currently testing the corresponding
-  dataset. `*driver*` is bound to the current dataset inside each test."
-  {:style/indent 0}
-  [expected actual]
-  `(expect-with-engines all-valid-engines ~expected ~actual))
-
-
-;;; Load metabase.test.data.* namespaces for all available drivers
-(doseq [engine all-valid-engines]
-  (let [driver-test-namespace (engine->test-extensions-ns-symbol engine)]
-    (when (find-ns driver-test-namespace)
-      (require driver-test-namespace))))
+  (let [expectation-name (format "expect-%s-" (hash &form))
+        expected-symb    (gensym "expected-")
+        actual-symb      (gensym "actual-")
+        engines-symb     (gensym "engines-")]
+    `(let [~expected-symb #(with-engine % ~expected)
+           ~actual-symb   #(with-engine % ~actual)
+           ~engines-symb  (delay ~engines)]
+       ~@(for [driver-name @test-engines]
+           `(def ~(vary-meta (symbol (str expectation-name (name driver-name))) assoc :expectation true)
+              (fn []
+                (when (contains? (deref ~engines-symb) ~driver-name)
+                  (expectations/doexpect
+                   (~expected-symb ~driver-name)
+                   (~actual-symb ~driver-name)))))))))

@@ -1,11 +1,11 @@
 (ns metabase.test.data.mongo
-  (:require [metabase.driver.mongo.util :refer [with-mongo-connection]]
+  (:require [metabase.driver.mongo :as mongo]
+            [metabase.driver.mongo.util :refer [with-mongo-connection]]
             [metabase.test.data.interface :as i]
             [metabase.util :as u]
             [monger
              [collection :as mc]
-             [core :as mg]])
-  (:import metabase.driver.mongo.MongoDriver))
+             [core :as mg]]))
 
 (defn- database->connection-details
   ([dbdef]
@@ -44,7 +44,7 @@
                (catch com.mongodb.MongoException _)))))))))
 
 
-(u/strict-extend MongoDriver
+(u/strict-extend (class (mongo/->MongoDriver))
   i/IDriverTestExtensions
   (merge i/IDriverTestExtensionsDefaultsMixin
          {:create-db!                   (u/drop-first-arg create-db!)

@@ -14,8 +14,10 @@
              [coerce :as tcoerce]
              [core :as time]
              [format :as tformat]]
+            [clojure.java.classpath :as classpath]
+            [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [medley.core :as m]
+            [clojure.tools.namespace.find :as ns-find]
             [metabase
              [config :as config]
              [util :as u]]
@@ -34,7 +36,9 @@
            org.joda.time.DateTime
            org.joda.time.format.DateTimeFormatter))
 
-;;; ## INTERFACE + CONSTANTS
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; |                                                   CONSTANTS                                                    |
+;;; +----------------------------------------------------------------------------------------------------------------+
 
 (def connection-error-messages
   "Generic error messages that drivers should return in their implementation of `humanize-connection-error-message`."
@@ -102,6 +106,11 @@
   `:placeholder` key"
   {:name         "additional-options"
    :display-name (tru "Additional JDBC connection string options")})
+
+
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; |                                               IDriver Interface                                                |
+;;; +----------------------------------------------------------------------------------------------------------------+
 
 (defprotocol IDriver
   "Methods that Metabase drivers must implement. Methods marked *OPTIONAL* have default implementations in
@@ -297,7 +306,9 @@
    :default-to-case-sensitive?        (constantly true)})
 
 
-;;; ## CONFIG
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; |                                      Driver Initialization & Registration                                      |
+;;; +----------------------------------------------------------------------------------------------------------------+
 
 (defsetting report-timezone (tru "Connection timezone to use when executing queries. Defaults to system timezone."))
 
@@ -309,42 +320,112 @@
 
      (register-driver! :postgres (PostgresDriver.))"
   [^Keyword engine, driver-instance]
-  {:pre [(keyword? engine) (map? driver-instance)]}
+  {:pre [(keyword? engine) driver-instance]}
+  (println "(register-driver!" engine ")") ; NOCOMMIT
   (swap! registered-drivers assoc engine driver-instance)
   (log/debug (trs "Registered driver {0} {1}" (u/format-color 'blue engine) (u/emoji "🚚"))))
 
-(defn available-drivers
-  "Info about available drivers."
-  []
-  (m/map-vals (fn [driver]
-                {:details-fields (details-fields driver)
-                 :driver-name    (name driver)
-                 :features       (features driver)})
-              @registered-drivers))
+(def ^:private possible-driver-name->namespace
+  "Delay to a map of possible driver names (as keywords) to a symbol naming the namespace we should load for it."
+  (delay
+   (into {} (for [ns-symb (ns-find/find-namespaces (classpath/system-classpath))
+                  :let    [[_ driver-name] (re-find #"metabase\.driver\.([a-z0-9_-]+$)" (name ns-symb))]
+                  :when   (and driver-name
+                               (not (str/ends-with? driver-name "-test")))]
+              [(keyword driver-name) ns-symb]))))
+
+(def possible-driver-names
+  "Delay to a set of all possible driver keywords. (Not all of these will be valid drivers; for example `generic-sql` or
+  `hive-like`.)"
+  (delay (set (keys @possible-driver-name->namespace))))
 
 (defn- init-driver-in-namespace! [ns-symb]
+  (println "(require" ns-symb ")")
   (require ns-symb)
   (if-let [register-driver-fn (ns-resolve ns-symb '-init-driver)]
     (register-driver-fn)
     (log/warn (trs "No -init-driver function found for ''{0}''" (name ns-symb)))))
 
-(defn find-and-load-drivers!
-  "Search Classpath for namespaces that start with `metabase.driver.`, then `require` them and look for the
-   `driver-init` function which provides a uniform way for Driver initialization to be done."
-  []
-  (doseq [ns-symb @u/metabase-namespace-symbols
-          :when   (re-matches #"^metabase\.driver\.[a-z0-9_]+$" (name ns-symb))]
-    (init-driver-in-namespace! ns-symb)))
 
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; |                                               Driver Resolution                                                |
+;;; +----------------------------------------------------------------------------------------------------------------+
+
+;; TODO - `driver-name->driver`? `resolve-driver`?
+(defn engine->driver
+  "Return the driver instance that should be used for given ENGINE keyword. This loads the corresponding driver if
+  needed; this is done with a call like:
+
+     (require 'metabase.driver.<engine>)
+
+  The namespace itself should register itself by passing an instance of a class that implements `IDriver` to
+  `metabase.driver/register-driver!`.
+
+  Returns `nil` if no matching driver could be found."
+  [engine]
+  {:pre [engine]}
+  (or ((keyword engine) @registered-drivers)
+      (when-let [namespace-symb (@possible-driver-name->namespace (keyword engine))]
+        (println "namespace-symb:" namespace-symb) ; NOCOMMIT
+        ;; TODO - Maybe this should throw the Exception instead of swallowing it?
+        (u/ignore-exceptions (init-driver-in-namespace! namespace-symb))
+        ((keyword engine) @registered-drivers))))
+
+
+;; Can the type of a DB change?
+(def ^{:arglists '([database-id])} database-id->driver
+  "Memoized function that returns the driver instance that should be used for `Database` with ID.
+   (Databases aren't expected to change their types, and this optimization makes things a lot faster).
+
+   This loads the corresponding driver if needed."
+  (let [db-id->engine (memoize (fn [db-id] (db/select-one-field :engine Database, :id db-id)))]
+    (fn [db-id]
+      (when-let [engine (db-id->engine (u/get-id db-id))]
+        (engine->driver engine)))))
+
+(defn ->driver
+  "Return an appropraiate driver for ENGINE-OR-DATABASE-OR-DB-ID.
+   Offered since this is somewhat more flexible in the arguments it accepts."
+  ;; TODO - we should make `engine->driver` and `database-id->driver` private and just use this for everything
+  [engine-or-database-or-db-id]
+  (if (keyword? engine-or-database-or-db-id)
+    (engine->driver engine-or-database-or-db-id)
+    (database-id->driver (u/get-id engine-or-database-or-db-id))))
+
+;; TODO - rename to `is-valid-driver-name?`
 (defn is-engine?
   "Is ENGINE a valid driver name?"
   [engine]
-  (contains? (available-drivers) (keyword engine)))
+  (contains? (set @possible-driver-names) (keyword engine)))
 
 (defn driver-supports?
   "Tests if a driver supports a given feature."
   [driver feature]
   (contains? (features driver) feature))
+
+
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; |                                 Info About Available Drivers (for Admin Page)                                  |
+;;; +----------------------------------------------------------------------------------------------------------------+
+
+(defn- driver->info [driver]
+  {:details-fields (details-fields driver)
+   :driver-name    (name driver)
+   :features       (features driver)})
+
+(defn available-drivers-info
+  "Info about available drivers. Used to populate the UI in the admin panel. Don't use this elsewhere because it
+  requires loading every single driver, which we'd otherwise rather defer if possible."
+  []
+  (into {} (for [driver-name @possible-driver-names
+                 :let        [driver (engine->driver driver-name)]
+                 :when       driver]
+             [driver (driver->info driver)])))
+
+
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; |                                    IDriver Default Impls & Other Helper Fns                                    |
+;;; +----------------------------------------------------------------------------------------------------------------+
 
 (defn report-timezone-if-supported
   "Returns the report-timezone if `DRIVER` supports setting it's
@@ -461,48 +542,6 @@
        (sort-by (comp (partial * -1) count second)) ; sort the map into pairs of [base-type count] with highest count as first pair
        ffirst))                                     ; take the base-type from the first pair
 
-
-;; ## Driver Lookup
-
-(defn engine->driver
-  "Return the driver instance that should be used for given ENGINE keyword.
-   This loads the corresponding driver if needed; this is done with a call like
-
-     (require 'metabase.driver.<engine>)
-
-   The namespace itself should register itself by passing an instance of a class that
-   implements `IDriver` to `metabase.driver/register-driver!`."
-  [engine]
-  {:pre [engine]}
-  (or ((keyword engine) @registered-drivers)
-      (let [namespace-symb (symbol (format "metabase.driver.%s" (name engine)))]
-        ;; TODO - Maybe this should throw the Exception instead of swallowing it?
-        (u/ignore-exceptions (init-driver-in-namespace! namespace-symb))
-        ((keyword engine) @registered-drivers))))
-
-
-;; Can the type of a DB change?
-(def ^{:arglists '([database-id])} database-id->driver
-  "Memoized function that returns the driver instance that should be used for `Database` with ID.
-   (Databases aren't expected to change their types, and this optimization makes things a lot faster).
-
-   This loads the corresponding driver if needed."
-  (let [db-id->engine (memoize (fn [db-id] (db/select-one-field :engine Database, :id db-id)))]
-    (fn [db-id]
-      (when-let [engine (db-id->engine (u/get-id db-id))]
-        (engine->driver engine)))))
-
-(defn ->driver
-  "Return an appropraiate driver for ENGINE-OR-DATABASE-OR-DB-ID.
-   Offered since this is somewhat more flexible in the arguments it accepts."
-  ;; TODO - we should make `engine->driver` and `database-id->driver` private and just use this for everything
-  [engine-or-database-or-db-id]
-  (if (keyword? engine-or-database-or-db-id)
-    (engine->driver engine-or-database-or-db-id)
-    (database-id->driver (u/get-id engine-or-database-or-db-id))))
-
-
-;; ## Implementation-Agnostic Driver API
 (def ^:private can-connect-timeout-ms
   "Consider `can-connect?`/`can-connect-with-details?` to have failed after this many milliseconds.
    By default, this is 5 seconds. You can configure this value by setting the env var `MB_DB_CONNECTION_TIMEOUT_MS`."

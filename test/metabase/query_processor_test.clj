@@ -3,7 +3,6 @@
   `metabase.query-processor-test.*` namespaces; there are so many that it is no longer feasible to keep them all in
   this one. Event-based DBs such as Druid are tested in `metabase.driver.event-query-processor-test`."
   (:require [clojure.set :as set]
-            [clojure.tools.logging :as log]
             [medley.core :as m]
             [metabase
              [driver :as driver]
@@ -12,32 +11,24 @@
             [metabase.test.data.datasets :as datasets]
             [metabase.util.date :as du]))
 
-;; make sure all the driver test extension namespaces are loaded <3 if this isn't done some things will get loaded at
-;; the wrong time which can end up causing test databases to be created more than once, which fails
-(doseq [engine (keys (driver/available-drivers))]
-  (let [test-ns (symbol (str "metabase.test.data." (name engine)))]
-    (try
-      (require test-ns)
-      (catch Throwable e
-        (log/warn (format "Error loading %s: %s" test-ns (.getMessage e)))))))
-
-
 ;;; ---------------------------------------------- Helper Fns + Macros -----------------------------------------------
 
-;; Event-Based DBs aren't tested here, but in `event-query-processor-test` instead.
-(def ^:private ^:const timeseries-engines #{:druid})
+;; Event-Based DBs aren't tested here, but in `timeseries-query-processor-test` instead.
+(def ^:private timeseries-engines #{:druid})
 
-(def ^:const non-timeseries-engines
+(def non-timeseries-engines
   "Set of engines for non-timeseries DBs (i.e., every driver except `:druid`)."
-  (set/difference datasets/all-valid-engines timeseries-engines))
+  (delay (set/difference @driver/possible-driver-names timeseries-engines)))
 
 (defn non-timeseries-engines-with-feature
   "Set of engines that support a given `feature`. If additional features are given, it will ensure all features are
   supported."
-  [feature & more-features]
-  (let [features (set (cons feature more-features))]
-    (set (for [engine non-timeseries-engines
-               :when  (set/subset? features (driver/features (driver/engine->driver engine)))]
+  [& features]
+  (let [features (set features)]
+    (set (for [engine @non-timeseries-engines
+               :let   [driver (driver/engine->driver engine)]
+               :when  (and driver
+                           (set/subset? features (driver/features driver)))]
            engine))))
 
 (defn non-timeseries-engines-without-feature
@@ -48,14 +39,14 @@
 (defmacro expect-with-non-timeseries-dbs
   {:style/indent 0}
   [expected actual]
-  `(datasets/expect-with-engines non-timeseries-engines
+  `(datasets/expect-with-engines @non-timeseries-engines
      ~expected
      ~actual))
 
 (defmacro expect-with-non-timeseries-dbs-except
   {:style/indent 1}
   [excluded-engines expected actual]
-  `(datasets/expect-with-engines (set/difference non-timeseries-engines (set ~excluded-engines))
+  `(datasets/expect-with-engines (set/difference @non-timeseries-engines (set ~excluded-engines))
      ~expected
      ~actual))
 

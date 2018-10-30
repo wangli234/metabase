@@ -2,11 +2,13 @@
   "Code for creating / destroying a Crate database from a `DatabaseDefinition`."
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as s]
-            [metabase.driver.generic-sql :as sql]
-            (metabase.test.data [generic-sql :as generic]
-                                [interface :as i])
-            [metabase.util :as u])
-  (:import metabase.driver.crate.CrateDriver))
+            [metabase.driver
+             [crate :as crate]
+             [generic-sql :as sql]]
+            [metabase.test.data
+             [generic-sql :as generic]
+             [interface :as i]]
+            [metabase.util :as u]))
 
 (def ^:private ^:const field-base-type->sql-type
   {:type/BigInteger "long"
@@ -54,7 +56,7 @@
   (constantly {:hosts "localhost:5200/"
                :user  "crate"}))
 
-(extend CrateDriver
+(extend (class (crate/->CrateDriver))
   generic/IGenericSQLTestExtensions
   (merge generic/DefaultsMixin
          {:execute-sql!              generic/sequentially-execute-sql!

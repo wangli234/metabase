@@ -1,18 +1,15 @@
 (ns metabase.test.data.snowflake
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as str]
-            [metabase.driver.generic-sql :as sql]
+            [metabase.driver
+             [generic-sql :as sql]
+             [snowflake :as snowflake]]
             [metabase.test.data
              [generic-sql :as generic]
              [interface :as i]]
-            [metabase.util :as u]
-            [honeysql.core :as hsql]
-            [honeysql.helpers :as h]
-            [metabase.util.honeysql-extensions :as hx]
-            [honeysql.format :as hformat])
-  (:import metabase.driver.snowflake.SnowflakeDriver))
+            [metabase.util :as u]))
 
-(def ^:private ^SnowflakeDriver snowflake-driver (SnowflakeDriver.))
+(def ^:private ^metabase.driver.snowflake.SnowflakeDriver snowflake-driver (snowflake/->SnowflakeDriver))
 
 (def ^:private ^:const field-base-type->sql-type
   {:type/BigInteger "BIGINT"
@@ -97,7 +94,7 @@
            (jdbc/execute! (no-db-connection-spec) [drop-db-sql]))
          (throw e))))))
 
-(u/strict-extend SnowflakeDriver
+(u/strict-extend (class snowflake-driver)
   generic/IGenericSQLTestExtensions
   (merge generic/DefaultsMixin
          {:field-base-type->sql-type (u/drop-first-arg field-base-type->sql-type)

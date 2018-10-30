@@ -68,20 +68,20 @@
   TaskHistory rows. This is useful to validate that the metadata and history is correct as the message might not be
   logged at all (depending on the logging level) or not stored."
   [f]
-  (let [step-info-atom (atom [])
+  (let [step-info-atom           (atom [])
         created-task-history-ids (atom [])
-        orig-log-fn (var-get #'metabase.sync.util/log-sync-summary)
-        orig-store-fn (var-get #'metabase.sync.util/store-sync-summary!)]
-    (with-redefs [metabase.sync.util/log-sync-summary (fn [operation database {:keys [steps] :as operation-metadata}]
-                                                        (swap! step-info-atom conj operation-metadata)
-                                                        (orig-log-fn operation database operation-metadata))
+        orig-log-fn              (var-get #'metabase.sync.util/log-sync-summary)
+        orig-store-fn            (var-get #'metabase.sync.util/store-sync-summary!)]
+    (with-redefs [metabase.sync.util/log-sync-summary    (fn [operation database {:keys [steps] :as operation-metadata}]
+                                                           (swap! step-info-atom conj operation-metadata)
+                                                           (orig-log-fn operation database operation-metadata))
                   metabase.sync.util/store-sync-summary! (fn [operation database operation-metadata]
                                                            (let [result (orig-store-fn operation database operation-metadata)]
                                                              (swap! created-task-history-ids concat result)
                                                              result))]
       (f))
     {:operation-results @step-info-atom
-     :task-history-ids @created-task-history-ids}))
+     :task-history-ids  @created-task-history-ids}))
 
 (defn sync-database!
   "Calls `sync-database!` and returns the the metadata for `step` as the result along with the `TaskHistory` for that

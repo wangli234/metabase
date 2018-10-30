@@ -153,10 +153,6 @@
   (plugins/setup-plugins!)
   (init-status/set-progress! 0.35)
 
-  ;; Load up all of our Database drivers, which are used for app db work
-  (driver/find-and-load-drivers!)
-  (init-status/set-progress! 0.4)
-
   ;; startup database.  validates connection & runs any necessary migrations
   (log/info (trs "Setting up and migrating Metabase DB. Please sit tight, this may take a minute..."))
   (mdb/setup-db! :auto-migrate (config/config-bool :mb-db-automigrate))
