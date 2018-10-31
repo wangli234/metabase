@@ -9,26 +9,32 @@ import QuestionAndResultLoader from "metabase/containers/QuestionAndResultLoader
 import Visualization from "metabase/visualizations/components/Visualization";
 
 import { Absolute, Relative } from "metabase/components/Position";
+import Button from "metabase/components/Button";
 import Card from "metabase/components/Card";
 import Icon, { IconWrapper } from "metabase/components/Icon";
 
-const HeaderControls = () => (
+const HeaderControls = ({ onToggleReference, onToggleVisualization }) => (
   <Flex align="center">
-    <IconWrapper>
+    <Motion
+      defaultStyle={{ scale: 0 }}
+      style={{ scale: onToggleVisualization ? spring(1) : spring(0) }}
+    >
+      {({ scale }) => (
+        <Button
+          medium
+          mx={2}
+          primary
+          onClick={() => onToggleVisualization()}
+          style={{ transform: `scale(${scale})` }}
+        >
+          Show visualization
+        </Button>
+      )}
+    </Motion>
+    <IconWrapper onClick={() => onToggleReference()}>
       <Icon name="reference" />
     </IconWrapper>
   </Flex>
-);
-
-const Header = () => (
-  <PageWrapper>
-    <Flex w={"100%"} align="center">
-      <h2>Question title</h2>
-      <Box ml="auto">
-        <HeaderControls />
-      </Box>
-    </Flex>
-  </PageWrapper>
 );
 
 const PanelHeader = ({ children }) => <h3>{children}</h3>;
@@ -117,30 +123,28 @@ class ModeContainer extends React.Component {
       >
         <QuestionAndResultLoader questionId={7}>
           {({ question, result, cancel, reload, rawSeries, loading }) => {
+            if (!question) {
+              return <div>"Loading..."</div>;
+            }
+            window.q = question;
             return (
               <Box className="flex flex-column flex-full">
-                <Flex align="center">
-                  <Header />
-                  <Flex ml="auto" align="center">
-                    <a
-                      onClick={() =>
+                <Flex align="center" p={3}>
+                  <h2>{question.displayName()}</h2>
+                  <Box ml="auto">
+                    <HeaderControls
+                      onToggleReference={() =>
                         this.setState({
                           referencePanelOpen: !this.state.referencePanelOpen,
                         })
                       }
-                    >
-                      Reference
-                    </a>
-                    <a
-                      onClick={() =>
-                        this.setState({
-                          vizPanelOpen: !this.state.vizPanelOpen,
-                        })
+                      onToggleVisualization={
+                        this.state.showResultPane
+                          ? () => this.setState({ showResultPane: false })
+                          : null
                       }
-                    >
-                      Visuzlization
-                    </a>
-                  </Flex>
+                    />
+                  </Box>
                 </Flex>
                 <Box
                   className="flex-full relative"
