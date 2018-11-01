@@ -11,14 +11,22 @@ import Visualization from "metabase/visualizations/components/Visualization";
 import { Absolute } from "metabase/components/Position";
 import Button from "metabase/components/Button";
 import Card from "metabase/components/Card";
-import { Grid, GridItem } from "metabase/components/Grid";
 import Icon, { IconWrapper } from "metabase/components/Icon";
 
+import colors from "metabase/lib/colors";
+
+/* Panels */
 import ReferencePanel from "metabase/query_builder/containers/ReferencePanel";
+import VisualizationPanel, {
+  VisualiztionControls,
+} from "metabase/query_builder/containers/VisualizationPanel";
+import ResultPanel from "metabase/query_builder/containers/ResultPanel";
 
-import visualizations from "metabase/visualizations";
-
-const HeaderControls = ({ onToggleReference, onToggleVisualization }) => (
+const HeaderControls = ({
+  onToggleReference,
+  onToggleVisualization,
+  onToggleFilters,
+}) => (
   <Flex align="center">
     <Motion
       defaultStyle={{ scale: 0 }}
@@ -36,121 +44,26 @@ const HeaderControls = ({ onToggleReference, onToggleVisualization }) => (
         </Button>
       )}
     </Motion>
+    <IconWrapper onClick={() => onToggleFilters()}>
+      <Icon name="star" />
+    </IconWrapper>
     <IconWrapper onClick={() => onToggleReference()}>
       <Icon name="reference" />
     </IconWrapper>
   </Flex>
 );
 
-const PanelHeader = ({ children }) => <h3>{children}</h3>;
-
-class VisualizationPanel extends React.Component {
+class FilterBar extends React.Component {
   render() {
-    const { question, onClosePanel } = this.props;
+    const { question } = this.props;
     window.q = question;
     return (
-      <Card p={2} style={{ width: 320, height: "100%" }}>
-        <PanelHeader>What do you want to see?</PanelHeader>
-        <Grid>
-          {Array.from(visualizations).map(([vizType, viz], index) => (
-            <GridItem key={index} w={1 / 2}>
-              <Flex
-                align="center"
-                flexDirection="column"
-                className="text-brand-hover cursor-pointer"
-                onClick={() => onClosePanel()}
-              >
-                <Icon name={viz.iconName} size={18} />
-                <Box>{viz.uiName}</Box>
-              </Flex>
-            </GridItem>
-          ))}
-        </Grid>
-      </Card>
-    );
-  }
-}
-
-class ResultPanel extends React.Component {
-  render() {
-    return (
-      <Box className="border-top bg-white overflow-hidden full-height">
-        <Flex
-          align="center"
-          py={2}
-          justify="center"
-          w={"100%"}
-          className="text-brand-hover cursor-pointer"
-        >
-          <Icon name="table" mt={1} />
-        </Flex>
-        <Box
-          className="relative"
-          style={{ height: "40%", width: "100%" }}
-          mx={3}
-        >
-          <QuestionAndResultLoader questionId={this.props.dataId}>
-            {({ question, result, cancel, reload, rawSeries, loading }) => {
-              return (
-                <Box className="spread flex flex-column">
-                  {rawSeries && <Visualization rawSeries={rawSeries} />}
-                </Box>
-              );
-            }}
-          </QuestionAndResultLoader>
-        </Box>
-        <Box
-          className="relative"
-          style={{ height: "40%", width: "100%" }}
-          mx={3}
-          mb={3}
-        >
-          <QuestionAndResultLoader questionId={this.props.aggregationId}>
-            {({ question, result, cancel, reload, rawSeries, loading }) => {
-              if (!question) {
-                return <div>"Loading..."</div>;
-              }
-              return (
-                <Box className="spread flex flex-column">
-                  {rawSeries && <Visualization rawSeries={rawSeries} />}
-                </Box>
-              );
-            }}
-          </QuestionAndResultLoader>
-        </Box>
-      </Box>
-    );
-  }
-}
-
-class VisualiztionControls extends React.Component {
-  render() {
-    return (
-      <Flex
-        align="center"
-        justify="center"
-        flexDirection="column"
-        style={{ height: "100%" }}
-      >
-        <Card
-          style={{ borderRadius: 10000, lineHeight: 1 }}
-          p={1}
-          mb={1}
-          className="text-brand"
-        >
-          <Icon name="bar" />
+      <Flex align="center" px={3} pb={1}>
+        <Card p={1} color="white" bg={colors["accent7"]} mr={1}>
+          Filter 1
         </Card>
-        <Card style={{ borderRadius: 10000, lineHeight: 1 }} p={1} mb={1}>
-          <Icon name="line" />
-        </Card>
-        <Card
-          style={{ borderRadius: 10000, lineHeight: 1 }}
-          p={1}
-          mb={1}
-          className="text-brand-hover"
-          onClick={() => this.props.onOpenPanel()}
-        >
-          <Icon name="chevronright" />
+        <Card p={1} color="white" bg={colors["accent7"]}>
+          Filter 2
         </Card>
       </Flex>
     );
@@ -163,9 +76,15 @@ class ModeContainer extends React.Component {
     vizPanelOpen: false,
     referencePanelOpen: false,
     showResultPane: false,
+    showFilterBar: false,
   };
   render() {
-    const { referencePanelOpen, vizPanelOpen, showResultPane } = this.state;
+    const {
+      referencePanelOpen,
+      vizPanelOpen,
+      showResultPane,
+      showFilterBar,
+    } = this.state;
     const wrapperHeight =
       findDOMNode(this.container) && findDOMNode(this.container).offsetHeight;
     return (
@@ -195,9 +114,28 @@ class ModeContainer extends React.Component {
                           ? () => this.setState({ showResultPane: false })
                           : null
                       }
+                      onToggleFilters={() =>
+                        this.setState({
+                          showFilterBar: !this.state.showFilterBar,
+                        })
+                      }
                     />
                   </Box>
                 </Flex>
+                <Motion
+                  defaultStyle={{
+                    height: 0,
+                  }}
+                  style={{
+                    height: showFilterBar ? spring(60) : spring(0),
+                  }}
+                >
+                  {({ height }) => (
+                    <Box style={{ height, overflow: "hidden" }} w={"100%"}>
+                      <FilterBar question={question} />
+                    </Box>
+                  )}
+                </Motion>
                 <Box
                   className="flex-full relative"
                   ref={node => (this.container = node)}
@@ -254,9 +192,9 @@ class ModeContainer extends React.Component {
                     )}
                   </Motion>
                   <Motion
-                    defaultStyle={{ left: 40, right: 0 }}
+                    defaultStyle={{ left: 80, right: 0 }}
                     style={{
-                      left: vizPanelOpen ? spring(400) : spring(40),
+                      left: vizPanelOpen ? spring(400) : spring(60),
                       right: referencePanelOpen ? spring(360) : spring(0),
                     }}
                   >
@@ -266,11 +204,16 @@ class ModeContainer extends React.Component {
                       </Box>
                     )}
                   </Motion>
-                  <Absolute top={0} bottom={40} style={{ zIndex: 3 }}>
+                  <Absolute
+                    top={0}
+                    bottom={40}
+                    style={{ display: "flex", zIndex: 3 }}
+                  >
                     <Flex
                       align="center"
                       justify="center"
                       flexDirection="column"
+                      px={1}
                     >
                       <VisualiztionControls
                         onOpenPanel={() =>
