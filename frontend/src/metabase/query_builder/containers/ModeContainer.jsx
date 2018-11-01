@@ -43,15 +43,39 @@ const PanelHeader = ({ children }) => <h3>{children}</h3>;
 
 const PageWrapper = ({ children }) => (
   <Box p={2} className="relative">
-    {children}
+    {children}{" "}
   </Box>
 );
 
 class ReferencePanel extends React.Component {
   render() {
+    const { question } = this.props;
+    const ICON_SIZE = 22;
     return (
       <Card p={2} style={{ width: 320, minHeight: 300 }}>
         <PanelHeader>Reference</PanelHeader>
+        <Box>
+          <h5>Learn about the source data</h5>
+          <Box>
+            <Icon name="database" size={ICON_SIZE} />
+            {question.query().database().name}
+          </Box>
+          <Box>
+            <Icon name="table" size={ICON_SIZE} />
+            {question.query().table().display_name}
+          </Box>
+        </Box>
+        <Box>
+          <h5>Compare with other items</h5>
+          <Box>
+            <Icon name="insight" size={ICON_SIZE} />
+            Metrics
+          </Box>
+          <Box>
+            <Icon name="all" size={ICON_SIZE} />
+            Other items in this collection
+          </Box>
+        </Box>
       </Card>
     );
   }
@@ -72,6 +96,7 @@ class VisualizationPanel extends React.Component {
 
 class ResultPanel extends React.Component {
   render() {
+    const { question } = this.props;
     return (
       <Box className="border-top bg-white overflow-hidden full-height">
         <Flex
@@ -160,7 +185,7 @@ class VisualiztionControls extends React.Component {
 class ModeContainer extends React.Component {
   state = {
     vizPanelOpen: false,
-    referencePanelOpen: false,
+    referencePanelOpen: true,
     showResultPane: false,
   };
   render() {
@@ -178,7 +203,6 @@ class ModeContainer extends React.Component {
             if (!question) {
               return <div>"Loading..."</div>;
             }
-            window.q = question;
             return (
               <Box className="flex flex-column flex-full">
                 <Flex align="center" p={2}>
@@ -245,7 +269,7 @@ class ModeContainer extends React.Component {
                           zIndex: 4,
                         }}
                       >
-                        <ReferencePanel />
+                        <ReferencePanel question={question} />
                       </Absolute>
                     )}
                   </Motion>
