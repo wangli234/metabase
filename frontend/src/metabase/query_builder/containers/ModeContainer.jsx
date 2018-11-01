@@ -8,9 +8,7 @@ import fitViewport from "metabase/hoc/FitViewPort";
 import QuestionAndResultLoader from "metabase/containers/QuestionAndResultLoader";
 import Visualization from "metabase/visualizations/components/Visualization";
 
-import GuiQueryEditor from "metabase/query_builder/components/GuiQueryEditor";
-
-import { Absolute, Relative } from "metabase/components/Position";
+import { Absolute } from "metabase/components/Position";
 import Button from "metabase/components/Button";
 import Card from "metabase/components/Card";
 import { Grid, GridItem } from "metabase/components/Grid";
@@ -18,7 +16,7 @@ import Icon, { IconWrapper } from "metabase/components/Icon";
 
 import ReferencePanel from "metabase/query_builder/containers/ReferencePanel";
 
-import visualizations, { getVisualizationRaw } from "metabase/visualizations";
+import visualizations from "metabase/visualizations";
 
 const HeaderControls = ({ onToggleReference, onToggleVisualization }) => (
   <Flex align="center">
@@ -45,12 +43,6 @@ const HeaderControls = ({ onToggleReference, onToggleVisualization }) => (
 );
 
 const PanelHeader = ({ children }) => <h3>{children}</h3>;
-
-const PageWrapper = ({ children }) => (
-  <Box p={2} className="relative">
-    {children}{" "}
-  </Box>
-);
 
 class VisualizationPanel extends React.Component {
   render() {
@@ -81,7 +73,6 @@ class VisualizationPanel extends React.Component {
 
 class ResultPanel extends React.Component {
   render() {
-    const { question } = this.props;
     return (
       <Box className="border-top bg-white overflow-hidden full-height">
         <Flex
@@ -170,7 +161,7 @@ class VisualiztionControls extends React.Component {
 class ModeContainer extends React.Component {
   state = {
     vizPanelOpen: false,
-    referencePanelOpen: true,
+    referencePanelOpen: false,
     showResultPane: false,
   };
   render() {
@@ -275,7 +266,7 @@ class ModeContainer extends React.Component {
                       </Box>
                     )}
                   </Motion>
-                  <Absolute top={0} bottom={40} style={{ zIndex: 4 }}>
+                  <Absolute top={0} bottom={40} style={{ zIndex: 3 }}>
                     <Flex
                       align="center"
                       justify="center"
