@@ -16,6 +16,8 @@ import Card from "metabase/components/Card";
 import { Grid, GridItem } from "metabase/components/Grid";
 import Icon, { IconWrapper } from "metabase/components/Icon";
 
+import ReferencePanel from "metabase/query_builder/containers/ReferencePanel";
+
 import visualizations, { getVisualizationRaw } from "metabase/visualizations";
 
 const HeaderControls = ({ onToggleReference, onToggleVisualization }) => (
@@ -49,40 +51,6 @@ const PageWrapper = ({ children }) => (
     {children}{" "}
   </Box>
 );
-
-class ReferencePanel extends React.Component {
-  render() {
-    const { question } = this.props;
-    const ICON_SIZE = 22;
-    return (
-      <Card p={2} style={{ width: 320, minHeight: 300 }}>
-        <PanelHeader>Reference</PanelHeader>
-        <Box>
-          <h5>Learn about the source data</h5>
-          <Box>
-            <Icon name="database" size={ICON_SIZE} />
-            {question.query().database().name}
-          </Box>
-          <Box>
-            <Icon name="table" size={ICON_SIZE} />
-            {question.query().table().display_name}
-          </Box>
-        </Box>
-        <Box>
-          <h5>Compare with other items</h5>
-          <Box>
-            <Icon name="insight" size={ICON_SIZE} />
-            Metrics
-          </Box>
-          <Box>
-            <Icon name="all" size={ICON_SIZE} />
-            Other items in this collection
-          </Box>
-        </Box>
-      </Card>
-    );
-  }
-}
 
 class VisualizationPanel extends React.Component {
   render() {
@@ -201,7 +169,7 @@ class VisualiztionControls extends React.Component {
 @fitViewport
 class ModeContainer extends React.Component {
   state = {
-    vizPanelOpen: true,
+    vizPanelOpen: false,
     referencePanelOpen: true,
     showResultPane: false,
   };
@@ -222,7 +190,7 @@ class ModeContainer extends React.Component {
             }
             return (
               <Box className="flex flex-column flex-full">
-                <Flex align="center" p={2}>
+                <Flex align="center" p={2} px={3}>
                   <h2>{question.displayName()}</h2>
                   <Box ml="auto">
                     <HeaderControls
@@ -287,7 +255,10 @@ class ModeContainer extends React.Component {
                           zIndex: 4,
                         }}
                       >
-                        <ReferencePanel question={question} />
+                        <ReferencePanel
+                          question={question}
+                          open={referencePanelOpen}
+                        />
                       </Absolute>
                     )}
                   </Motion>
@@ -312,7 +283,9 @@ class ModeContainer extends React.Component {
                     >
                       <VisualiztionControls
                         onOpenPanel={() =>
-                          this.setState({ vizPanelOpen: true })
+                          this.setState({
+                            vizPanelOpen: !this.state.vizPanelOpen,
+                          })
                         }
                       />
                     </Flex>
