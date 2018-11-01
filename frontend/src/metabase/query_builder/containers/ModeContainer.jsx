@@ -114,9 +114,33 @@ class ResultPanel extends React.Component {
 class VisualiztionControls extends React.Component {
   render() {
     return (
-      <Card style={{ borderRadius: 10000, lineHeight: 1 }} p={1}>
-        <Icon name="gear" />
-      </Card>
+      <Flex
+        align="center"
+        justify="center"
+        flexDirection="column"
+        style={{ height: "100%" }}
+      >
+        <Card
+          style={{ borderRadius: 10000, lineHeight: 1 }}
+          p={1}
+          mb={1}
+          className="text-brand"
+        >
+          <Icon name="bar" />
+        </Card>
+        <Card style={{ borderRadius: 10000, lineHeight: 1 }} p={1} mb={1}>
+          <Icon name="line" />
+        </Card>
+        <Card
+          style={{ borderRadius: 10000, lineHeight: 1 }}
+          p={1}
+          mb={1}
+          className="text-brand-hover"
+          onClick={() => this.props.onOpenPanel()}
+        >
+          <Icon name="chevronright" />
+        </Card>
+      </Flex>
     );
   }
 }
@@ -215,9 +239,9 @@ class ModeContainer extends React.Component {
                     )}
                   </Motion>
                   <Motion
-                    defaultStyle={{ left: 0, right: 0 }}
+                    defaultStyle={{ left: 40, right: 0 }}
                     style={{
-                      left: vizPanelOpen ? spring(400) : spring(0),
+                      left: vizPanelOpen ? spring(400) : spring(40),
                       right: referencePanelOpen ? spring(360) : spring(0),
                     }}
                   >
@@ -227,10 +251,18 @@ class ModeContainer extends React.Component {
                       </Box>
                     )}
                   </Motion>
-                  <Absolute
-                    onClick={() => this.setState({ vizPanelOpen: true })}
-                  >
-                    <VisualiztionControls />
+                  <Absolute top={0} bottom={40} style={{ zIndex: 4 }}>
+                    <Flex
+                      align="center"
+                      justify="center"
+                      flexDirection="column"
+                    >
+                      <VisualiztionControls
+                        onOpenPanel={() =>
+                          this.setState({ vizPanelOpen: true })
+                        }
+                      />
+                    </Flex>
                   </Absolute>
                   <Motion
                     defaultStyle={{ y: wrapperHeight - 60 }}
