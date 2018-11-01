@@ -216,6 +216,8 @@ class ModeContainer extends React.Component {
                       px={1}
                     >
                       <VisualiztionControls
+                        question={question}
+                        isOpen={vizPanelOpen}
                         onOpenPanel={() =>
                           this.setState({
                             vizPanelOpen: !this.state.vizPanelOpen,

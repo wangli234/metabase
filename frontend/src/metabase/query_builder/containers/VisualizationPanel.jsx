@@ -10,6 +10,7 @@ import { Grid, GridItem } from "metabase/components/Grid";
 
 export class VisualiztionControls extends React.Component {
   render() {
+    const { isOpen } = this.props;
     return (
       <Flex
         align="center"
@@ -22,17 +23,9 @@ export class VisualiztionControls extends React.Component {
           p={2}
           mb={1}
           className="text-brand cursor-pointer"
-        >
-          <Icon name="bar" />
-        </Card>
-        <Card
-          style={{ borderRadius: 10000, lineHeight: 1 }}
-          p={2}
-          mb={1}
-          className="text-brand-hover cursor-pointer"
           onClick={() => this.props.onOpenPanel()}
         >
-          <Icon name="chevronright" />
+          <Icon name={isOpen ? "chevronleft" : "bar"} />
         </Card>
       </Flex>
     );
