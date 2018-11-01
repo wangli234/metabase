@@ -320,15 +320,6 @@ export default class Navbar extends Component {
               },
             ]}
           />
-          {hasDataAccess && (
-            <Tooltip tooltip={t`Reference`}>
-              <Link to="reference" data-metabase-event={`NavBar;Reference`}>
-                <IconWrapper>
-                  <Icon name="reference" />
-                </IconWrapper>
-              </Link>
-            </Tooltip>
-          )}
           <Tooltip tooltip={t`Activity`}>
             <Link to="activity" data-metabase-event={`NavBar;Activity`}>
               <IconWrapper>

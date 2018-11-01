@@ -8,6 +8,8 @@ import fitViewport from "metabase/hoc/FitViewPort";
 import QuestionAndResultLoader from "metabase/containers/QuestionAndResultLoader";
 import Visualization from "metabase/visualizations/components/Visualization";
 
+import GuiQueryEditor from "metabase/query_builder/components/GuiQueryEditor";
+
 import { Absolute, Relative } from "metabase/components/Position";
 import Button from "metabase/components/Button";
 import Card from "metabase/components/Card";
@@ -72,7 +74,13 @@ class ResultPanel extends React.Component {
   render() {
     return (
       <Box className="border-top bg-white overflow-hidden full-height">
-        <Flex align="center" py={2} justify="center">
+        <Flex
+          align="center"
+          py={2}
+          justify="center"
+          w={"100%"}
+          className="text-brand-hover cursor-pointer"
+        >
           <Icon name="table" mt={1} />
         </Flex>
         <Box
@@ -80,7 +88,7 @@ class ResultPanel extends React.Component {
           style={{ height: "40%", width: "100%" }}
           mx={3}
         >
-          <QuestionAndResultLoader questionId={8}>
+          <QuestionAndResultLoader questionId={this.props.dataId}>
             {({ question, result, cancel, reload, rawSeries, loading }) => {
               return (
                 <Box className="spread flex flex-column">
@@ -96,8 +104,11 @@ class ResultPanel extends React.Component {
           mx={3}
           mb={3}
         >
-          <QuestionAndResultLoader questionId={9}>
+          <QuestionAndResultLoader questionId={this.props.aggregationId}>
             {({ question, result, cancel, reload, rawSeries, loading }) => {
+              if (!question) {
+                return <div>"Loading..."</div>;
+              }
               return (
                 <Box className="spread flex flex-column">
                   {rawSeries && <Visualization rawSeries={rawSeries} />}
@@ -162,7 +173,7 @@ class ModeContainer extends React.Component {
         w={"100%"}
         className={cx(this.props.fitClassNames, "overflow-hidden")}
       >
-        <QuestionAndResultLoader questionId={7}>
+        <QuestionAndResultLoader questionId={this.props.params.q1}>
           {({ question, result, cancel, reload, rawSeries, loading }) => {
             if (!question) {
               return <div>"Loading..."</div>;
@@ -170,7 +181,7 @@ class ModeContainer extends React.Component {
             window.q = question;
             return (
               <Box className="flex flex-column flex-full">
-                <Flex align="center" px={3} py={2}>
+                <Flex align="center" p={2}>
                   <h2>{question.displayName()}</h2>
                   <Box ml="auto">
                     <HeaderControls
@@ -289,7 +300,10 @@ class ModeContainer extends React.Component {
                           transform: `translate3d(0px, ${y}px, 0px)`,
                         }}
                       >
-                        <ResultPanel />
+                        <ResultPanel
+                          dataId={this.props.params.q2}
+                          aggregationId={this.props.params.q3}
+                        />
                       </Absolute>
                     )}
                   </Motion>
