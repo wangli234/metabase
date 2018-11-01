@@ -17,7 +17,19 @@ class ReferenceComparisons extends React.Component {
   static headerTitle = "Compare";
   render() {
     const { metrics } = this.props;
-    return <Box px={3}>{metrics.map(m => m.name)}</Box>;
+    return (
+      <Box px={3} py={2}>
+        {metrics.map(m => (
+          <Box key={m.id} my={1} className="text-brand-hover cursor-pointer">
+            <Flex align="center">
+              <Icon name="insight" color={colors["accent7"]} mr={1} />
+              <h3>{m.name}</h3>
+            </Flex>
+            <p className="m0">{m.description}</p>
+          </Box>
+        ))}
+      </Box>
+    );
   }
 }
 
@@ -77,8 +89,8 @@ class ReferenceTableOfContents extends React.Component {
           className="cursor-pointer"
         >
           <Icon name="insight" size={ICON_SIZE} />
-          <h4>Compare with other items</h4>
-          <p>Compare this against other</p>
+          <h4>Compare</h4>
+          <p>Compare this against other metrics or aggregations</p>
         </Card>
         <Card
           p={3}
@@ -141,29 +153,39 @@ class ReferencePanel extends React.Component {
         >
           {({ height }) => (
             <Box p={3} bg={colors["brand"]} color="white" style={{ height }}>
-              <Flex align="center">
-                <Motion
-                  defaultStyle={{ opacity: 0, x: -40 }}
-                  style={{
-                    opacity: isTableOfContents ? spring(0) : spring(1),
-                    x: isTableOfContents && spring(0),
-                  }}
-                >
-                  {({ opacity, x }) => (
-                    <Icon
-                      onClick={() =>
-                        this.setState({ view: ReferenceTableOfContents })
-                      }
-                      name="chevronleft"
+              <Motion
+                defaultStyle={{ opacity: 0, x: -5 }}
+                style={{
+                  opacity: isTableOfContents ? spring(0) : spring(1),
+                  x: isTableOfContents ? spring(-5) : spring(0),
+                }}
+              >
+                {({ opacity, x }) => (
+                  <Flex align="center">
+                    <Box
                       style={{
                         opacity,
                         transform: `translate3d(${x}px, 0px, 0px)`,
+                        lineHeight: 1,
                       }}
-                    />
-                  )}
-                </Motion>
-                <h2>{CurrentView.headerTitle}</h2>
-              </Flex>
+                      p={1}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        this.setState({ view: ReferenceTableOfContents })
+                      }
+                    >
+                      <Icon name="chevronleft" />
+                    </Box>
+                    <h2
+                      style={{
+                        transform: `translate3d(${x}px, 0px, 0px)`,
+                      }}
+                    >
+                      {CurrentView.headerTitle}
+                    </h2>
+                  </Flex>
+                )}
+              </Motion>
             </Box>
           )}
         </Motion>

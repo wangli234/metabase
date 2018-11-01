@@ -45,7 +45,7 @@ const HeaderControls = ({
       )}
     </Motion>
     <IconWrapper onClick={() => onToggleFilters()}>
-      <Icon name="star" />
+      <Icon name="filter" size={22} />
     </IconWrapper>
     <IconWrapper onClick={() => onToggleReference()}>
       <Icon name="reference" />

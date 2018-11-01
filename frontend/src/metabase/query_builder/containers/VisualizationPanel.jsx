@@ -4,6 +4,8 @@ import { Motion, spring } from "react-motion";
 
 import visualizations from "metabase/visualizations";
 
+import colors from "metabase/lib/colors";
+
 import Card from "metabase/components/Card";
 import Icon, { IconWrapper } from "metabase/components/Icon";
 import { Grid, GridItem } from "metabase/components/Grid";
@@ -40,21 +42,28 @@ class VisualizationPanel extends React.Component {
     return (
       <Card p={2} style={{ width: 320, height: "100%" }}>
         <PanelHeader>What do you want to see?</PanelHeader>
-        <Grid>
-          {Array.from(visualizations).map(([vizType, viz], index) => (
-            <GridItem key={index} w={1 / 2}>
-              <Flex
-                align="center"
-                flexDirection="column"
-                className="text-brand-hover cursor-pointer"
-                onClick={() => onClosePanel()}
-              >
-                <Icon name={viz.iconName} size={18} />
-                <Box>{viz.uiName}</Box>
-              </Flex>
-            </GridItem>
-          ))}
-        </Grid>
+        <Box mt={3}>
+          <Grid>
+            {Array.from(visualizations).map(([vizType, viz], index) => (
+              <GridItem key={index} w={1 / 2} my={2}>
+                <Flex
+                  align="center"
+                  flexDirection="column"
+                  className="text-brand-hover cursor-pointer"
+                  onClick={() => onClosePanel()}
+                >
+                  <Icon
+                    name={viz.iconName}
+                    size={18}
+                    mb={1}
+                    color={colors["bg-dark"]}
+                  />
+                  <h4>{viz.uiName}</h4>
+                </Flex>
+              </GridItem>
+            ))}
+          </Grid>
+        </Box>
       </Card>
     );
   }
