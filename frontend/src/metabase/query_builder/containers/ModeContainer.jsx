@@ -13,7 +13,10 @@ import GuiQueryEditor from "metabase/query_builder/components/GuiQueryEditor";
 import { Absolute, Relative } from "metabase/components/Position";
 import Button from "metabase/components/Button";
 import Card from "metabase/components/Card";
+import { Grid, GridItem } from "metabase/components/Grid";
 import Icon, { IconWrapper } from "metabase/components/Icon";
+
+import visualizations, { getVisualizationRaw } from "metabase/visualizations";
 
 const HeaderControls = ({ onToggleReference, onToggleVisualization }) => (
   <Flex align="center">
@@ -83,12 +86,26 @@ class ReferencePanel extends React.Component {
 
 class VisualizationPanel extends React.Component {
   render() {
+    const { question, onClosePanel } = this.props;
+    window.q = question;
     return (
       <Card p={2} style={{ width: 320, height: "100%" }}>
-        <PanelHeader>Viz settings</PanelHeader>
-        <Button primary medium onClick={() => this.props.onClosePanel()}>
-          Done
-        </Button>
+        <PanelHeader>What do you want to see?</PanelHeader>
+        <Grid>
+          {Array.from(visualizations).map(([vizType, viz], index) => (
+            <GridItem key={index} w={1 / 2}>
+              <Flex
+                align="center"
+                flexDirection="column"
+                className="text-brand-hover cursor-pointer"
+                onClick={() => onClosePanel()}
+              >
+                <Icon name={viz.iconName} size={18} />
+                <Box>{viz.uiName}</Box>
+              </Flex>
+            </GridItem>
+          ))}
+        </Grid>
       </Card>
     );
   }
@@ -184,7 +201,7 @@ class VisualiztionControls extends React.Component {
 @fitViewport
 class ModeContainer extends React.Component {
   state = {
-    vizPanelOpen: false,
+    vizPanelOpen: true,
     referencePanelOpen: true,
     showResultPane: false,
   };
@@ -245,6 +262,7 @@ class ModeContainer extends React.Component {
                         }}
                       >
                         <VisualizationPanel
+                          question={question}
                           onClosePanel={() =>
                             this.setState({ vizPanelOpen: false })
                           }
