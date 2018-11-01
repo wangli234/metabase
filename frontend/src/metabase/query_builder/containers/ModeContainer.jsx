@@ -27,7 +27,7 @@ const HeaderControls = ({ onToggleReference, onToggleVisualization }) => (
           onClick={() => onToggleVisualization()}
           style={{ transform: `scale(${scale})` }}
         >
-          Show visualization
+          Visualize
         </Button>
       )}
     </Motion>
@@ -48,7 +48,7 @@ const PageWrapper = ({ children }) => (
 class ReferencePanel extends React.Component {
   render() {
     return (
-      <Card p={2} style={{ width: 320 }}>
+      <Card p={2} style={{ width: 320, minHeight: 300 }}>
         <PanelHeader>Reference</PanelHeader>
       </Card>
     );
@@ -58,8 +58,11 @@ class ReferencePanel extends React.Component {
 class VisualizationPanel extends React.Component {
   render() {
     return (
-      <Card p={2} style={{ width: 320 }}>
+      <Card p={2} style={{ width: 320, height: "100%" }}>
         <PanelHeader>Viz settings</PanelHeader>
+        <Button primary medium onClick={() => this.props.onClosePanel()}>
+          Done
+        </Button>
       </Card>
     );
   }
@@ -68,16 +71,15 @@ class VisualizationPanel extends React.Component {
 class ResultPanel extends React.Component {
   render() {
     return (
-      <Flex
-        py={2}
-        flexDirection="column"
-        align="center"
-        justify="center"
-        className="border-top bg-white overflow-hidden"
-      >
-        <Icon name="table" mr={1} />
-        View result table
-        <Box className="relative" style={{ height: 400, width: "100%" }}>
+      <Box className="border-top bg-white overflow-hidden full-height">
+        <Flex align="center" py={2} justify="center">
+          <Icon name="table" mt={1} />
+        </Flex>
+        <Box
+          className="relative"
+          style={{ height: "40%", width: "100%" }}
+          mx={3}
+        >
           <QuestionAndResultLoader questionId={8}>
             {({ question, result, cancel, reload, rawSeries, loading }) => {
               return (
@@ -88,7 +90,12 @@ class ResultPanel extends React.Component {
             }}
           </QuestionAndResultLoader>
         </Box>
-        <Box className="relative" style={{ height: 400, width: "100%" }}>
+        <Box
+          className="relative"
+          style={{ height: "40%", width: "100%" }}
+          mx={3}
+          mb={3}
+        >
           <QuestionAndResultLoader questionId={9}>
             {({ question, result, cancel, reload, rawSeries, loading }) => {
               return (
@@ -99,7 +106,17 @@ class ResultPanel extends React.Component {
             }}
           </QuestionAndResultLoader>
         </Box>
-      </Flex>
+      </Box>
+    );
+  }
+}
+
+class VisualiztionControls extends React.Component {
+  render() {
+    return (
+      <Card style={{ borderRadius: 10000, lineHeight: 1 }} p={1}>
+        <Icon name="gear" />
+      </Card>
     );
   }
 }
@@ -129,7 +146,7 @@ class ModeContainer extends React.Component {
             window.q = question;
             return (
               <Box className="flex flex-column flex-full">
-                <Flex align="center" p={3}>
+                <Flex align="center" px={3} py={2}>
                   <h2>{question.displayName()}</h2>
                   <Box ml="auto">
                     <HeaderControls
@@ -159,8 +176,20 @@ class ModeContainer extends React.Component {
                     }}
                   >
                     {({ x, y, opacity }) => (
-                      <Absolute left={20} style={{ opacity, zIndex: 4 }}>
-                        <VisualizationPanel />
+                      <Absolute
+                        top={20}
+                        bottom={80}
+                        style={{
+                          opacity,
+                          zIndex: 2,
+                          transform: `translate3d(${x}px, 0px, 0px)`,
+                        }}
+                      >
+                        <VisualizationPanel
+                          onClosePanel={() =>
+                            this.setState({ vizPanelOpen: false })
+                          }
+                        />
                       </Absolute>
                     )}
                   </Motion>
@@ -174,9 +203,9 @@ class ModeContainer extends React.Component {
                   >
                     {({ x, y, opacity }) => (
                       <Absolute
-                        right={40}
+                        right={0}
                         style={{
-                          transform: `translate3d(${x}px, ${y}px, 0px)`,
+                          transform: `translate3d(-${x}px, ${y}px, 0px)`,
                           opacity,
                           zIndex: 4,
                         }}
@@ -185,9 +214,24 @@ class ModeContainer extends React.Component {
                       </Absolute>
                     )}
                   </Motion>
-                  <Box style={{ height: "75vh" }}>
-                    {rawSeries && <Visualization rawSeries={rawSeries} />}
-                  </Box>
+                  <Motion
+                    defaultStyle={{ left: 0, right: 0 }}
+                    style={{
+                      left: vizPanelOpen ? spring(400) : spring(0),
+                      right: referencePanelOpen ? spring(360) : spring(0),
+                    }}
+                  >
+                    {({ left, right }) => (
+                      <Box style={{ height: "80vh" }} mr={right} ml={left}>
+                        {rawSeries && <Visualization rawSeries={rawSeries} />}
+                      </Box>
+                    )}
+                  </Motion>
+                  <Absolute
+                    onClick={() => this.setState({ vizPanelOpen: true })}
+                  >
+                    <VisualiztionControls />
+                  </Absolute>
                   <Motion
                     defaultStyle={{ y: wrapperHeight - 60 }}
                     style={{
@@ -208,6 +252,7 @@ class ModeContainer extends React.Component {
                           })
                         }
                         style={{
+                          zIndex: 3,
                           backgroundColor: "white",
                           transform: `translate3d(0px, ${y}px, 0px)`,
                         }}
