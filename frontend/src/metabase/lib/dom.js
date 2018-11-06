@@ -248,6 +248,61 @@ export function moveToFront(element) {
   }
 }
 
+// need to keep track of the latest click's metaKey state because sometimes
+// `open` is called asynchronously, thus window.event isn't the click event
+let metaKey;
+window.addEventListener(
+  "mouseup",
+  e => {
+    metaKey = e.metaKey;
+  },
+  true,
+);
+
+/**
+ * helper for opening links in same or different window depending on origin and
+ * meta key state
+ */
+export function open(
+  url,
+  {
+    event = window.event,
+    // always open in new window
+    blank = false,
+    // open in new window if command-click
+    blankOnMetaKey = true,
+    // open in new window for different origin
+    blankOnDifferentOrigin = true,
+    // custom function for opening in same window
+    openInSameWindow = null,
+    // custom function for opening in new window
+    openInBlankWindow = null,
+  } = {},
+) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.rel = "noopener";
+  if (
+    blank ||
+    (blankOnMetaKey &&
+      (event && event.metaKey != null ? event.metaKey : metaKey)) ||
+    (blankOnDifferentOrigin && a.origin !== window.location.origin)
+  ) {
+    if (openInBlankWindow) {
+      openInBlankWindow(url);
+    } else {
+      a.target = "_blank";
+      a.click();
+    }
+  } else {
+    if (openInSameWindow) {
+      openInSameWindow(url);
+    } else {
+      a.click();
+    }
+  }
+}
+
 /**
  * @returns the clip-path CSS property referencing the clip path in the current document, taking into account the <base> tag.
  */
