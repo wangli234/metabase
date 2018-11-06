@@ -10,7 +10,7 @@ import {
   createAction,
   createThunkAction,
 } from "metabase/lib/redux";
-import { open } from "metabase/lib/dom"
+import { open } from "metabase/lib/dom";
 import { normalize, schema } from "normalizr";
 
 import Dashboards from "metabase/entities/dashboards";
@@ -829,7 +829,7 @@ export const navigateToNewCardFromDashboard = createThunkAction(
 
     open(url, {
       blankOnMetaKey: true,
-      openInSameWindow: (url) => dispatch(push(url))
+      openInSameWindow: url => dispatch(push(url)),
     });
   },
 );

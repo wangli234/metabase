@@ -19,6 +19,7 @@ import {
 } from "metabase/visualizations";
 import { getComputedSettingsForSeries } from "metabase/visualizations/lib/settings/visualization";
 import { isSameSeries } from "metabase/visualizations/lib/utils";
+import { performDefaultAction } from "metabase/visualizations/lib/action";
 
 import Utils from "metabase/lib/utils";
 import { datasetContainsNoResults } from "metabase/lib/dataset";
@@ -270,6 +271,15 @@ export default class Visualization extends Component {
           clicked.dimensions ? "dimensions=" + clicked.dimensions.length : ""
         }`,
       );
+    }
+
+    if (
+      performDefaultAction(this.getClickActions(clicked), {
+        dispatch: this.props.dispatch,
+        onChangeCardAndRun: this.handleOnChangeCardAndRun,
+      })
+    ) {
+      return;
     }
 
     // needs to be delayed so we don't clear it when switching from one drill through to another

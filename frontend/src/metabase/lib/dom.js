@@ -266,31 +266,20 @@ window.addEventListener(
 export function open(
   url,
   {
-    event = window.event,
-    // always open in new window
-    blank = false,
-    // open in new window if command-click
-    blankOnMetaKey = true,
-    // open in new window for different origin
-    blankOnDifferentOrigin = true,
     // custom function for opening in same window
     openInSameWindow = null,
     // custom function for opening in new window
     openInBlankWindow = null,
+    ...options
   } = {},
 ) {
-  const a = document.createElement("a");
-  a.href = url;
-  a.rel = "noopener";
-  if (
-    blank ||
-    (blankOnMetaKey &&
-      (event && event.metaKey != null ? event.metaKey : metaKey)) ||
-    (blankOnDifferentOrigin && a.origin !== window.location.origin)
-  ) {
+  if (shouldOpenInBlankWindow(url, options)) {
     if (openInBlankWindow) {
       openInBlankWindow(url);
     } else {
+      const a = document.createElement("a");
+      a.href = url;
+      a.rel = "noopener";
       a.target = "_blank";
       a.click();
     }
@@ -298,9 +287,39 @@ export function open(
     if (openInSameWindow) {
       openInSameWindow(url);
     } else {
+      const a = document.createElement("a");
+      a.href = url;
+      a.rel = "noopener";
       a.click();
     }
   }
+}
+
+export function shouldOpenInBlankWindow(
+  url,
+  {
+    event = window.event,
+    // always open in new window
+    blank = false,
+    // open in new window if command-click
+    blankOnMetaKey = true,
+    // open in new window for different origin
+    blankOnDifferentOrigin = true,
+  } = {},
+) {
+  if (blank) {
+    return true;
+  } else if (
+    blankOnMetaKey &&
+    (event && event.metaKey != null ? event.metaKey : metaKey)
+  ) {
+    return true;
+  } else if (blankOnDifferentOrigin) {
+    const a = document.createElement("a");
+    a.href = url;
+    return a.origin !== window.location.origin;
+  }
+  return false;
 }
 
 /**

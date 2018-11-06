@@ -10,6 +10,8 @@ import { Link } from "react-router";
 
 import MetabaseAnalytics from "metabase/lib/analytics";
 
+import { performAction } from "metabase/visualizations/lib/action";
+
 import type {
   ClickObject,
   ClickAction,
@@ -105,17 +107,18 @@ export default class ChartClickActions extends Component {
         getGALabelForAction(action),
       );
       this.setState({ popoverAction: action });
-    } else if (action.question) {
-      const nextQuestion = action.question();
-      if (nextQuestion) {
+    } else {
+      const didPerform = performAction(action, this.props);
+      if (didPerform) {
         MetabaseAnalytics.trackEvent(
           "Actions",
           "Executed Click Action",
           getGALabelForAction(action),
         );
-        onChangeCardAndRun({ nextCard: nextQuestion.card() });
+        this.close();
+      } else {
+        console.warn("No action performed", action);
       }
-      this.close();
     }
   };
 
