@@ -1,12 +1,23 @@
+/* @flow */
+
 import { open } from "metabase/lib/dom";
 
 import _ from "underscore";
 
-export function performAction(action, { dispatch, onChangeCardAndRun }) {
+import type { ClickAction } from "metabase/meta/types/Visualization";
+
+type PerformActionProps = {
+  dispatch: Function,
+  onChangeCardAndRun: Function,
+};
+
+export function performAction(
+  action: ClickAction,
+  { dispatch, onChangeCardAndRun }: PerformActionProps,
+) {
   if (action.action) {
     const reduxAction = action.action();
     if (reduxAction) {
-      // $FlowFixMe: dispatch provided by @connect
       dispatch(reduxAction);
       return true;
     }
@@ -28,9 +39,10 @@ export function performAction(action, { dispatch, onChangeCardAndRun }) {
   return false;
 }
 
-export function performDefaultAction(actions, props) {
-  console.log("actions", actions, actions && actions[0] && actions[0].default);
-
+export function performDefaultAction(
+  actions: ClickAction[],
+  props: PerformActionProps,
+) {
   if (!actions) {
     return false;
   }
@@ -41,7 +53,7 @@ export function performDefaultAction(actions, props) {
   }
 
   // "defaultAlways" action even if there's more than one
-  const action = _.find(actions, action => action.defaultAlways);
+  const action = _.find(actions, action => action.defaultAlways === true);
   if (action) {
     return performAction(action, props);
   }

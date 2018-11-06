@@ -80,6 +80,7 @@ type Props = {
   // for click actions
   metadata: Metadata,
   onChangeCardAndRun: OnChangeCardAndRun,
+  dispatch: Function,
 
   // used for showing content in place of visualization, e.x. dashcard filter mapping
   replacementContent: Element<any>,
