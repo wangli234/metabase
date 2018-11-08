@@ -1,6 +1,8 @@
 (ns metabase.query-processor-test.filter-test
   "Tests for the `:filter` clause."
-  (:require [metabase.query-processor-test :refer :all]
+  (:require [metabase
+             [driver :as driver]
+             [query-processor-test :refer :all]]
             [metabase.test
              [data :as data]
              [util :as tu]]
@@ -96,7 +98,7 @@
    :native_form true}
   (do
     ;; Prevent an issue with Snowflake were a previous connection's report-timezone setting can affect this test's results
-    (when (= :snowflake datasets/*engine*) (tu/clear-connection-pool (data/id)))
+    (when (= :snowflake driver/*driver*) (tu/clear-connection-pool (data/id)))
     (->> (data/run-mbql-query checkins
            {:aggregation [[:count]]
             :filter      [:between [:datetime-field $date :day] "2015-04-01" "2015-05-01"]})

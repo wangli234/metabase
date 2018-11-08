@@ -1,6 +1,17 @@
 (ns expectation-options
   "Namspace expectations will automatically load before running a tests")
 
+;; NOCOMMIT
+(defonce resolv
+  (let [orig clojure.core/resolve]
+    (fn [& args]
+      (let [result (apply orig args)]
+        (when-not result
+          (println (str "Could not resolve: " args)))
+        result))))
+
+(intern 'clojure.core 'resolve resolv)
+
 (defn- tables-with-data->error-msg
   "Function that takes a list of modes and whill query each. If records are found, return a string with an error
   message"

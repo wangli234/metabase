@@ -1,8 +1,12 @@
 (ns metabase.driver.presto-test
   (:require [clj-http.client :as http]
             [expectations :refer [expect]]
+            [metabase.db.metadata-queries :as metadata-queries]
             [metabase.driver :as driver]
-            [metabase.driver.presto :as presto]
+            [metabase.driver
+             [presto :as presto]
+             [util :as driver.u]]
+            [metabase.driver.sql.query-processor :as sql.qp]
             [metabase.models
              [field :refer [Field]]
              [table :as table :refer [Table]]]
@@ -11,8 +15,7 @@
              [util :as tu]]
             [metabase.test.data.datasets :as datasets]
             [metabase.test.util.log :as tu.log]
-            [toucan.db :as db])
-  (:import metabase.driver.presto.PrestoDriver))
+            [toucan.db :as db]))
 
 ;;; HELPERS
 
@@ -77,7 +80,7 @@
              {:name "venues"     :schema "default"}
              {:name "checkins"   :schema "default"}
              {:name "users"      :schema "default"}}}
-  (driver/describe-database (PrestoDriver.) (data/db)))
+  (driver/describe-database :presto (data/db)))
 
 ;; DESCRIBE-TABLE
 (datasets/expect-with-engine :presto
@@ -101,7 +104,7 @@
              {:name          "id"
               :database-type "integer"
               :base-type     :type/Integer}}}
-  (driver/describe-table (PrestoDriver.) (data/db) (db/select-one 'Table :id (data/id :venues))))
+  (driver/describe-table :presto (data/db) (db/select-one 'Table :id (data/id :venues))))
 
 ;;; TABLE-ROWS-SAMPLE
 (datasets/expect-with-engine :presto
@@ -110,7 +113,7 @@
    ["The Apple Pan"]
    ["Wurstküche"]
    ["Brite Spot Family Restaurant"]]
-  (take 5 (driver/table-rows-sample (Table (data/id :venues))
+  (take 5 (metadata-queries/table-rows-sample (Table (data/id :venues))
             [(Field (data/id :venues :name))])))
 
 
@@ -124,11 +127,12 @@
              :order-by [[:default.categories.id :asc]]}]
    :where  [:> :__rownum__ 5]
    :limit  5}
-  (#'presto/apply-page {:select   [[:default.categories.name "name"] [:default.categories.id "id"]]
-                        :from     [:default.categories]
-                        :order-by [[:default.categories.id :asc]]}
-                       {:page {:page  2
-                               :items 5}}))
+  (sql.qp/apply-top-level-clause :presto :page
+    {:select   [[:default.categories.name "name"] [:default.categories.id "id"]]
+     :from     [:default.categories]
+     :order-by [[:default.categories.id :asc]]}
+    {:page {:page  2
+            :items 5}}))
 
 (expect
   #"com.jcraft.jsch.JSchException:"
@@ -144,7 +148,7 @@
                    :tunnel-port    22
                    :tunnel-user    "bogus"}]
       (tu.log/suppress-output
-        (driver/can-connect-with-details? engine details :rethrow-exceptions)))
+        (driver.u/can-connect-with-details? engine details :rethrow-exceptions)))
     (catch Exception e
       (.getMessage e))))
 

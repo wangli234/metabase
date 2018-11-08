@@ -29,7 +29,7 @@
   (when-let [{topic :topic database :item} driver-notifications-event]
     (try
       ;; notify the appropriate driver about the updated database
-      (driver/notify-database-updated (driver/engine->driver (:engine database)) database)
+      (driver/notify-database-updated (:engine database) database)
       (catch Throwable e
         (log/warn (format "Failed to process driver notifications event. %s" (:topic driver-notifications-event)) e)))))
 

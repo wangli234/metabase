@@ -40,7 +40,7 @@
    ]
   (tu/call-with-paused-query
    (fn [query-thunk called-query? called-cancel? pause-query]
-     (let [ ;; This fake prepared statement is cancellable like a prepared statement, but will allow us to tell the
+     (let [ ;; This fake prepared statement is cancelable like a prepared statement, but will allow us to tell the
            ;; difference between our Prepared statement and the real thing
            fake-prep-stmt             (->FakePreparedStatement called-cancel?)
            ;; Much of the underlying plumbing of MB requires a working jdbc/query and jdbc/prepared-statement (such

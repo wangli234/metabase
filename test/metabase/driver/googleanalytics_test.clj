@@ -5,6 +5,7 @@
             [metabase
              [query-processor :as qp]
              [util :as u]]
+            [metabase.driver.googleanalytics :as ga]
             [metabase.driver.googleanalytics.query-processor :as ga.qp]
             [metabase.models
              [card :refer [Card]]
@@ -235,10 +236,10 @@
                               :source       :aggregation
                               :description  "This is metric"
                               :base_type    :type/Text}]}}
-  (with-redefs [metabase.driver.googleanalytics/memoized-column-metadata (fn [_ column-name]
-                                                                           {:display_name column-name
-                                                                            :description  (str "This is " column-name)
-                                                                            :base_type    :type/Text})]
+  (with-redefs [ga/memoized-column-metadata (fn [_ column-name]
+                                              {:display_name column-name
+                                               :description  (str "This is " column-name)
+                                               :base_type    :type/Text})]
     (do-with-some-fields
      (fn [objects]
        (let [results {:columns [:ga:eventLabel :ga:totalEvents]
